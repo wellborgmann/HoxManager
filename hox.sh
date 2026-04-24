@@ -894,9 +894,9 @@ update_server() {
     
     echo ""
     echo -e "${GREEN}✔ Sistema Hox atualizado com sucesso!${NC}"
-    echo -e "${YELLOW}Recomenda-se fechar e abrir o script novamente.${NC}"
-    echo ""
-    read -p "Pressione Enter para voltar..."
+    echo -e "${YELLOW}Reiniciando o script para carregar a nova versão...${NC}"
+    sleep 2
+    exec "$script_location"
 }
 
 uninstall_system() {
