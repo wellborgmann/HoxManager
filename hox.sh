@@ -5,7 +5,7 @@
 if [ -f "VERSION" ]; then
     VERSION=$(cat VERSION | xargs)
 else
-    VERSION="2.0.5"
+    VERSION="2.0.6"
 fi
 
 
@@ -195,12 +195,94 @@ restore_users() {
         useradd -M -s /bin/false $expiry_options -c "HOX|$pass|$limit|$uuid" "$u"
         echo "$u:$pass" | chpasswd
         
-        sync_xray_user add "$u" "$uuid"
         count=$((count + 1))
     done < "$file"
     
+    # Sincronização em lote - MUITO mais rápido
+    sync_all_users_to_xray
+    
     echo -e "${GREEN}✔ Restauração concluída! Total: $count usuários.${NC}"
     read -p "Pressione Enter para voltar..."
+}
+
+restore_sshplus_backup() {
+    clear
+    echo -e "${CYAN}┌────────────────────────────────────────────────────────┐${NC}"
+    draw_centered_line "IMPORTAR BACKUP SSHPLUS" "$WHITE"
+    echo -e "${CYAN}├────────────────────────────────────────────────────────┤${NC}"
+    
+    echo -n "Caminho do arquivo (padrão backup.vps): "; read file
+    [ -z "$file" ] && file="backup.vps"
+    
+    if [ ! -f "$file" ]; then
+        echo -e "${RED}✘ Arquivo não encontrado!${NC}"
+        read -p "Enter..."
+        return
+    fi
+    
+    echo -e "${YELLOW}Iniciando importação do SSHPlus...${NC}"
+    
+    local tmp_dir="/tmp/hox_restore_sshplus"
+    rm -rf "$tmp_dir" && mkdir -p "$tmp_dir"
+    
+    # Extrair arquivos necessários
+    tar -xf "$file" -C "$tmp_dir" root/usuarios.db etc/shadow etc/SSHPlus/senha/ 2>/dev/null
+    
+    if [ ! -f "$tmp_dir/root/usuarios.db" ]; then
+        echo -e "${RED}✘ Erro: root/usuarios.db não encontrado no backup!${NC}"
+        rm -rf "$tmp_dir"
+        read -p "Enter..."
+        return
+    fi
+    
+    local count=0
+    # Processar cada usuário no usuarios.db
+    while read -r u limit; do
+        [ -z "$u" ] && continue
+        [[ "$u" == "#"* ]] && continue
+        
+        echo -e "Importando: ${CYAN}$u${NC}..."
+        
+        # Obter senha
+        local pass=""
+        if [ -f "$tmp_dir/etc/SSHPlus/senha/$u" ]; then
+            pass=$(cat "$tmp_dir/etc/SSHPlus/senha/$u" | xargs)
+        fi
+        
+        # Se não tem senha registrada no SSHPlus (estranho), define padrão
+        [ -z "$pass" ] && pass="hox123"
+        
+        # Obter validade do shadow
+        local exp_days=$(grep "^$u:" "$tmp_dir/etc/shadow" | cut -d: -f8)
+        local expiry_options=""
+        local exp_date="-"
+        if [ -n "$exp_days" ] && [ "$exp_days" != "-1" ]; then
+            exp_date=$(date -d "@$((exp_days * 86400))" +%Y-%m-%d 2>/dev/null)
+            if [ -n "$exp_date" ]; then
+                expiry_options="-e $exp_date"
+            fi
+        fi
+        
+        # Gerar UUID Hox
+        local uuid=$(generate_deterministic_uuid "$u" "$pass")
+        
+        # Remover se existir para evitar conflitos
+        userdel -f "$u" >/dev/null 2>&1
+        
+        # Adicionar usuário com comentário HOX
+        useradd -M -s /bin/false $expiry_options -c "HOX|$pass|$limit|$uuid" "$u"
+        echo "$u:$pass" | chpasswd
+        
+        # sync_xray_user add "$u" "$uuid" (Removido do loop por performance)
+        count=$((count + 1))
+    done < "$tmp_dir/root/usuarios.db"
+    
+    # Sincronização em lote - MUITO mais rápido
+    sync_all_users_to_xray
+    
+    rm -rf "$tmp_dir"
+    echo -e "${GREEN}✔ Sucesso! $count usuários importados do SSHPlus.${NC}"
+    read -p "Pressione Enter para voltar ao menu..."
 }
 
 sync_xray_user() {
@@ -461,12 +543,14 @@ user_menu() {
         draw_boxed_line "  ${WHITE}5)${NC} Bloquear Usuário (Kick + Expire)"
         draw_boxed_line "  ${WHITE}6)${NC} Sincronizar Usuários com Xray"
         draw_boxed_line "  ${WHITE}7)${NC} Fazer Backup dos Usuários"
-        draw_boxed_line "  ${WHITE}8)${NC} Restaurar Usuários"
+        draw_boxed_line "  ${WHITE}8)${NC} Restaurar Usuários (Hox)"
+        draw_boxed_line "  ${WHITE}9)${NC} Importar Backup SSHPlus (.vps)"
         draw_boxed_line "  ${WHITE}0)${NC} Voltar ao Menu Principal"
         echo -e "${CYAN}└────────────────────────────────────────────────────────┘${NC}"
         echo -n "Opção: "
         read uopt
         case $uopt in
+            9) restore_sshplus_backup ;;
             1)
                 echo -n "Nome: "; read user
                 if [ -z "$user" ]; then
