@@ -5,7 +5,7 @@
 if [ -f "VERSION" ]; then
     VERSION=$(cat VERSION | xargs)
 else
-    VERSION="2.0.2"
+    VERSION="2.0.3"
 fi
 
 
