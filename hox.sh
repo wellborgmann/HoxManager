@@ -712,13 +712,13 @@ port_menu() {
         udp_ports=$(jq -r '.udp | join(",")' "$PORT_DB")
         
         echo -e "${CYAN}┌────────────────────────────────────────────────────────┐${NC}"
-        draw_centered_line "GESTÃO DE PORTAS (TCP/UDP)" "$WHITE"
+        draw_centered_line "GESTÃO DE PORTAS" "$WHITE"
         echo -e "${CYAN}├────────────────────────────────────────────────────────┤${NC}"
-        draw_boxed_line "  TCP Ativas: ${GREEN}$tcp_ports"
+        draw_boxed_line "  Portas Ativas: ${GREEN}$tcp_ports"
         draw_boxed_line "  UDPGW Ativas: ${GREEN}$udp_ports"
         echo -e "${CYAN}├────────────────────────────────────────────────────────┤${NC}"
-        draw_boxed_line "  ${WHITE}1)${NC} Abrir Nova Porta TCP"
-        draw_boxed_line "  ${WHITE}2)${NC} Remover Porta TCP"
+        draw_boxed_line "  ${WHITE}1)${NC} Abrir Nova Porta"
+        draw_boxed_line "  ${WHITE}2)${NC} Remover Porta"
         draw_boxed_line "  ${WHITE}3)${NC} Abrir Nova Porta UDPGW"
         draw_boxed_line "  ${WHITE}4)${NC} Remover Porta UDPGW"
         draw_boxed_line "  ${WHITE}5)${NC} Resetar Todas (Padrão)"
@@ -729,14 +729,14 @@ port_menu() {
         
         case $popt in
             1)
-                echo -n "Digite a porta TCP para abrir: "; read p
+                echo -n "Digite a porta para abrir: "; read p
                 [[ ! "$p" =~ ^[0-9]+$ ]] && echo -e "${RED}Porta inválida!${NC}" && sleep 1 && continue
                 tmp=$(mktemp)
                 jq --arg p "$p" '.tcp = (.tcp + [$p] | unique)' "$PORT_DB" > "$tmp" && mv "$tmp" "$PORT_DB"
                 apply_and_restart
                 ;;
             2)
-                echo -n "Digite a porta TCP para remover: "; read p
+                echo -n "Digite a porta para remover: "; read p
                 tmp=$(mktemp)
                 jq --arg p "$p" '.tcp |= map(select(. != $p))' "$PORT_DB" > "$tmp" && mv "$tmp" "$PORT_DB"
                 apply_and_restart
@@ -853,9 +853,10 @@ update_server() {
     echo "  -> Baixando novo binário..."
     mkdir -p /usr/local/hox
     if curl -L "$GITHUB_URL/server?v=$TS" -o /usr/local/hox/server.tmp; then
-        # Verifica se o arquivo baixado é válido (não é um 404 do GitHub)
-        if grep -q "Not Found" /usr/local/hox/server.tmp; then
-            echo -e "${RED}✘ Erro: Arquivo 'server' não encontrado no GitHub.${NC}"
+        # Verifica o tamanho: se for menor que 100kb, provavelmente é um erro 404 do GitHub
+        file_size=$(stat -c%s "/usr/local/hox/server.tmp")
+        if [ "$file_size" -lt 102400 ]; then
+            echo -e "${RED}✘ Erro: O arquivo baixado é inválido (muito pequeno). Verifique o link no GitHub.${NC}"
             rm /usr/local/hox/server.tmp
         else
             mv /usr/local/hox/server.tmp /usr/local/hox/server
@@ -870,8 +871,9 @@ update_server() {
     script_location=$(readlink -f "$0")
     echo "  -> Atualizando script de gestão: $script_location"
     if curl -L "$GITHUB_URL/hox.sh?v=$TS" -o "${script_location}.tmp"; then
-        if grep -q "Not Found" "${script_location}.tmp"; then
-             echo -e "${RED}✘ Erro: Arquivo 'hox.sh' não encontrado no GitHub.${NC}"
+        file_size=$(stat -c%s "${script_location}.tmp")
+        if [ "$file_size" -lt 1024 ]; then
+             echo -e "${RED}✘ Erro: O script baixado é inválido. Verifique o link no GitHub.${NC}"
              rm "${script_location}.tmp"
         else
             mv "${script_location}.tmp" "$script_location"
