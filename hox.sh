@@ -819,9 +819,9 @@ update_server() {
     echo -e "${CYAN}│${WHITE}               ATUALIZAR SISTEMA HOX                   ${CYAN}│${NC}"
     echo -e "${CYAN}├────────────────────────────────────────────────────────┤${NC}"
     echo -e "${CYAN}│${NC} Deseja baixar a versão mais recente?                  ${CYAN}│${NC}"
-    echo -e "${CYAN}│${NC} (Binary, Script e Componentes)                        ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} Versão Atual: $VERSION                                ${CYAN}│${NC}"
     echo -e "${CYAN}└────────────────────────────────────────────────────────┘${NC}"
-    echo -n "Confirmar? (s/n): "
+    echo -n "Confirmar Atualização? (s/n): "
     read confirm
     if [ "$confirm" != "s" ] && [ "$confirm" != "S" ]; then
         return
@@ -829,41 +829,56 @@ update_server() {
 
     echo -e "${YELLOW}Iniciando atualização...${NC}"
     
-    # Garantir que o processo não esteja travando o download (Text file busy)
-    echo "Parando serviço hox e limpando processos ativos..."
+    # 0. Cachebuster para evitar cache do GitHub
+    local TS=$(date +%s)
+    
+    # 1. Parar serviços
+    echo "  -> Parando serviços e limpando processos..."
     systemctl stop hox.service 2>/dev/null
     pkill -9 -f "/usr/local/hox/server" 2>/dev/null
     fuser -k /usr/local/hox/server 2>/dev/null
     sleep 1
 
-    # 1. Atualizar Binário
-    echo "Atualizando binário do Hox Server..."
+    # 2. Atualizar Binário
+    echo "  -> Baixando novo binário..."
     mkdir -p /usr/local/hox
-    if curl -L "$GITHUB_URL/server" -o /usr/local/hox/server; then
-        chmod +x /usr/local/hox/server
-        echo -e "${GREEN}✔ Binário Hox atualizado!${NC}"
+    if curl -L "$GITHUB_URL/server?v=$TS" -o /usr/local/hox/server.tmp; then
+        # Verifica se o arquivo baixado é válido (não é um 404 do GitHub)
+        if grep -q "Not Found" /usr/local/hox/server.tmp; then
+            echo -e "${RED}✘ Erro: Arquivo 'server' não encontrado no GitHub.${NC}"
+            rm /usr/local/hox/server.tmp
+        else
+            mv /usr/local/hox/server.tmp /usr/local/hox/server
+            chmod +x /usr/local/hox/server
+            echo -e "${GREEN}✔ Binário Hox atualizado!${NC}"
+        fi
     else
-        echo -e "${RED}✘ Erro ao baixar o binário!${NC}"
+        echo -e "${RED}✘ Erro fatal ao baixar o binário!${NC}"
     fi
 
-    # 2. Atualizar Script Shell (se auto-atualizar)
+    # 3. Atualizar Script Shell
     script_location=$(readlink -f "$0")
-    echo "Atualizando script de gerenciamento: $script_location"
-    if curl -L "$GITHUB_URL/hox.sh" -o "$script_location"; then
-        chmod +x "$script_location"
-        echo -e "${GREEN}✔ Script hox.sh atualizado!${NC}"
+    echo "  -> Atualizando script de gestão: $script_location"
+    if curl -L "$GITHUB_URL/hox.sh?v=$TS" -o "${script_location}.tmp"; then
+        if grep -q "Not Found" "${script_location}.tmp"; then
+             echo -e "${RED}✘ Erro: Arquivo 'hox.sh' não encontrado no GitHub.${NC}"
+             rm "${script_location}.tmp"
+        else
+            mv "${script_location}.tmp" "$script_location"
+            chmod +x "$script_location"
+            echo -e "${GREEN}✔ Script hox.sh atualizado!${NC}"
+        fi
     else
         echo -e "${RED}✘ Erro ao baixar o script!${NC}"
     fi
 
-    echo "Reiniciando serviços e sincronizando usuários..."
+    echo "  -> Reiniciando serviços..."
+    systemctl daemon-reload
     sync_all_users_to_xray
-    systemctl enable hox.service >/dev/null 2>&1
     systemctl start hox.service 2>/dev/null
     
     echo ""
-    echo -e "${GREEN}✔ Sistema Hox V18.4 atualizado com sucesso!${NC}"
-    echo -e "${YELLOW}Nota: Nenhum dado de usuário ou configuração foi removido.${NC}"
+    echo -e "${GREEN}✔ Sistema Hox atualizado com sucesso!${NC}"
     echo -e "${YELLOW}Recomenda-se fechar e abrir o script novamente.${NC}"
     echo ""
     read -p "Pressione Enter para voltar..."
