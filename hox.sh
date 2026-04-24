@@ -455,9 +455,10 @@ user_menu() {
         draw_boxed_line "  ${WHITE}2)${NC} Listar Todos os Usuários"
         draw_boxed_line "  ${WHITE}3)${NC} Editar Perfil de Usuário"
         draw_boxed_line "  ${WHITE}4)${NC} Remover Usuário do Sistema"
-        draw_boxed_line "  ${WHITE}5)${NC} Sincronizar Usuários com Xray"
-        draw_boxed_line "  ${WHITE}6)${NC} Fazer Backup dos Usuários"
-        draw_boxed_line "  ${WHITE}7)${NC} Restaurar Usuários"
+        draw_boxed_line "  ${WHITE}5)${NC} Bloquear Usuário (Kick + Expire)"
+        draw_boxed_line "  ${WHITE}6)${NC} Sincronizar Usuários com Xray"
+        draw_boxed_line "  ${WHITE}7)${NC} Fazer Backup dos Usuários"
+        draw_boxed_line "  ${WHITE}8)${NC} Restaurar Usuários"
         draw_boxed_line "  ${WHITE}0)${NC} Voltar ao Menu Principal"
         echo -e "${CYAN}└────────────────────────────────────────────────────────┘${NC}"
         echo -n "Opção: "
@@ -657,16 +658,39 @@ user_menu() {
                 read -p "Pressione Enter para voltar..."
                 ;;
             5)
-                sync_all_users_to_xray
-                read -p "Pressione Enter para voltar..."
+                select_hox_user "BLOQUEAR USUÁRIO"
+                user="$SELECTED_USER"
+                if [ -z "$user" ]; then
+                    continue
+                fi
+                
+                echo -e "${YELLOW}Bloqueando $user e derrubando conexões...${NC}"
+                
+                # 1. Expira a conta no sistema (Data no passado)
+                usermod -e 1970-01-01 "$user"
+                
+                # 2. Remove do Xray (UUID vira inválido)
+                sync_xray_user remove "$user"
+                
+                # 3. KICK: Mata todos os processos do usuário agora
+                pkill -u "$user" >/dev/null 2>&1
+                
+                echo -e "${GREEN}✔ Usuário $user bloqueado com sucesso!${NC}"
+                read -p "Enter..."
                 ;;
             6)
-                backup_users
+                echo -e "${YELLOW}Iniciando sincronização forçada...${NC}"
+                sync_all_users_to_xray
+                echo -e "${GREEN}✔ Sincronização concluída!${NC}"
+                read -p "Enter..."
                 ;;
             7)
+                backup_users
+                ;;
+            8)
                 restore_users
                 ;;
-            0) return ;;
+            0) break ;;
         esac
     done
 }
