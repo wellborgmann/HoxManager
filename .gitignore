@@ -1,0 +1,42 @@
+# Binários compilados
+*.exe
+*.test
+
+# Arquivos de backup e temporários
+*.bak
+*.tmp
+*.temp
+
+# Logs
+*.log
+/var/log/
+
+# IDE e Sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Configurações sensíveis e Segurança
+.env
+config.json
+ssl/
+*.pem
+*.key
+*.crt
+
+# Backups e Dados
+backup/
+*.db
+*.sqlite
+*.sql
+
+# Binários de terceiros / Pesados
+*.apk
+*.idsig
+node_modules/
+painel/
+server.go
+protector.go
+build_all.sh
+deploy.sh
