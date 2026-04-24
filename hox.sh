@@ -5,7 +5,7 @@
 if [ -f "VERSION" ]; then
     VERSION=$(cat VERSION | xargs)
 else
-    VERSION="2.0.3"
+    VERSION="2.0.4"
 fi
 
 
@@ -774,6 +774,7 @@ apply_and_restart() {
     # Liberar portas ocupadas
     IFS=',' read -ra ADDR <<< "$tcp_ports"
     for p in "${ADDR[@]}"; do
+        [[ -z "$p" ]] && continue
         if lsof -i :$p >/dev/null 2>&1; then
             pid=$(lsof -t -i :$p)
             service_name=$(systemctl list-units --type=service --state=running | grep -oP '\S+\.service' | xargs -I {} sh -c 'systemctl show {} -p MainPID | grep -q "MainPID='$pid'" && echo {}' | head -1)
@@ -789,6 +790,7 @@ apply_and_restart() {
     done
     IFS=',' read -ra ADDR <<< "$udp_ports"
     for p in "${ADDR[@]}"; do
+        [[ -z "$p" ]] && continue
         if lsof -i :$p >/dev/null 2>&1; then
             pid=$(lsof -t -i :$p)
             service_name=$(systemctl list-units --type=service --state=running | grep -oP '\S+\.service' | xargs -I {} sh -c 'systemctl show {} -p MainPID | grep -q "MainPID='$pid'" && echo {}' | head -1)
