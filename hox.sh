@@ -1,14 +1,17 @@
 #!/bin/bash
 
 # Hox Management - CLI
-# Versão 2.0.1
-VERSION="2.0.1"
+# Versão Dinâmica
+if [ -f "VERSION" ]; then
+    VERSION=$(cat VERSION | xargs)
+else
+    VERSION="2.0.2"
+fi
 
 
 PORT_DB="/etc/hox/ports.json"
 SERVER_BIN="/usr/local/hox/server"
 GITHUB_URL="https://raw.githubusercontent.com/wellborgmann/HoxManager/main"
->> /etc/hox/vps_version 2>/dev/null
 mkdir -p /etc/hox
 
 LICENSE_KEY_FILE="/etc/hox/license.key"
