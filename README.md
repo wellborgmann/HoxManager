@@ -6,11 +6,11 @@ HoxManager é uma suíte de gerenciamento profissional para servidores VPN de al
 
 ## ✨ Diferenciais e Funcionalidades
 
-- **Multiplexação de Protocolos**: Permite rodar múltiplos protocolos (SSH, XHTTP, SOCKS, Xray Nativo) simultaneamente na **mesma porta (443)**. Elimina a necessidade de uma segunda VPS apenas para evitar conflitos de porta.
-- **Ghost-XHTTP Engine**: Camada de transporte baseada em HTTP otimizada para streaming de dados ultra-rápido e estável.
-- **Native UDP Gateway**: Processamento UDP dedicado (Porta 7300) otimizado para jogos mobile e aplicações de alta demanda.
-- **Gestão de Portas Dinâmica**: Configure e altere portas TCP e UDP em tempo real sem interrupções.
-- **CLI Avançada**: Interface de linha de comando completa para gestão de usuários, edição de perfis e sincronização.
+- **Multiplexação Universal de Protocolos**: Permite que **qualquer porta** configurada no sistema funcione como um ponto de entrada universal. O software identifica automaticamente o protocolo (SSH, XHTTP, SOCKS, Xray Nativo) e realiza o roteamento sem conflitos. Isso elimina a necessidade de múltiplas VPS ou de dedicar portas específicas para cada serviço.
+- **Ghost-XHTTP Engine**: Camada de transporte baseada em HTTP otimizada para streaming de dados estável em ambientes de rede complexos.
+- **Native UDP Gateway**: Processamento UDP dedicado (Porta 7300) otimizado para jogos mobile e aplicações de baixa latência.
+- **Gestão de Portas Flexível**: Adicione ou remova portas ouvintes a qualquer momento. Todas as portas abertas suportam todos os protocolos simultaneamente.
+- **CLI Avançada**: Interface completa para gestão de usuários, edição de perfis e controle de serviços.
 
 ## 🚀 Instalação
 
@@ -28,11 +28,11 @@ HoxManager is a professional management suite for high-performance VPN servers, 
 
 ## ✨ Core Features
 
-- **Protocol Multiplexing**: Run multiple protocols (SSH, XHTTP, SOCKS, Native Xray) simultaneously on the **same port (443)**. No need for additional VPS instances due to port conflicts.
-- **XHTTP Engine**: High-performance HTTP-based transport layer designed for stable and fast data streaming.
-- **Native UDP Gateway**: Dedicated UDP processing (Port 7300) optimized for high-demand applications and mobile networking.
-- **Dynamic Port Management**: Easily configure and manage TCP and UDP ports in real-time.
-- **Advanced CLI**: Full-featured command-line interface for user management, profile editing, and server synchronization.
+- **Universal Protocol Multiplexing**: Any configured port on the system acts as a universal entry point. The software automatically identifies the protocol (SSH, XHTTP, SOCKS, Native Xray) and routes the traffic without conflicts. This eliminates the need for multiple VPS instances or dedicated ports for each service.
+- **XHTTP Engine**: High-performance HTTP-based transport layer designed for stable data streaming.
+- **Native UDP Gateway**: Dedicated UDP processing (Port 7300) optimized for mobile gaming and low-latency applications.
+- **Flexible Port Management**: Add or remove listening ports at any time. Every open port supports all protocols simultaneously through active sniffing.
+- **Advanced CLI**: Full-featured command-line interface for user management, profile editing, and service control.
 
 ## 🚀 Installation
 
