@@ -22,6 +22,7 @@ curl -L https://raw.githubusercontent.com/wellborgmann/HoxManager/main/installer
 
 ---
 
+
 # ⚡ HoxManager - VPN Management System (English)
 
 HoxManager is a professional management suite for high-performance VPN servers, providing an optimized environment for low-latency networking and efficient user administration.
