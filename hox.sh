@@ -392,7 +392,7 @@ menu() {
     
     echo -e "${CYAN}├────────────────────────────────────────────────────────┤${NC}"
     draw_boxed_line "  ${WHITE}1)${NC} Gerenciar Usuários"
-    draw_boxed_line "  ${WHITE}2)${NC} Gerenciar Portas (TCP/UDP)"
+    draw_boxed_line "  ${WHITE}2)${NC} Gerenciar Portas"
     draw_boxed_line "  ${WHITE}3)${NC} Reiniciar Servidor"
     draw_boxed_line "  ${WHITE}4)${NC} Desinstalar Sistema"
     draw_boxed_line "  ${WHITE}5)${NC} Auto-Start do Script"
