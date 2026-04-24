@@ -483,8 +483,9 @@ user_menu() {
                 echo "$user:$pass" | chpasswd
                 
                 sync_xray_user add "$user" "$uuid"
+                expiry_br=$(date -d "$expiry_date" +%d/%m/%Y)
                 echo -e "${GREEN}✔ Criado: $user | Senha: $pass | UUID: $uuid${NC}"
-                echo -e "${YELLOW}Validade: $expiry_date | Limite: $limit${NC}"
+                echo -e "${YELLOW}Validade: $expiry_br | Limite: $limit${NC}"
                 read -p "Enter..."
                 ;;
             2)
@@ -592,7 +593,7 @@ user_menu() {
                         expiry_days=$(grep "^$user:" /etc/shadow | cut -d: -f8)
                         expiry_date="Ilimitado"
                         if [ -n "$expiry_days" ]; then
-                            expiry_date=$(date -d "@$((expiry_days * 86400))" +%Y-%m-%d)
+                            expiry_date=$(date -d "@$((expiry_days * 86400))" +%d/%m/%Y)
                         fi
 
                         clear
@@ -632,11 +633,20 @@ user_menu() {
                                 sleep 1
                                 ;;
                             3)
-                                echo -n "Nova Data (AAAA-MM-DD): "; read exp
-                                [ -z "$exp" ] && continue
-                                usermod -e "$exp" "$user"
-                                echo -e "${GREEN}✔ Data de validade atualizada!${NC}"
-                                sleep 1
+                                echo -n "Quantidade de dias a partir de hoje: "; read days
+                                [ -z "$days" ] && continue
+                                new_exp=$(date -d "+$days days" +%Y-%m-%d)
+                                
+                                # 1. Atualiza no sistema
+                                usermod -e "$new_exp" "$user"
+                                
+                                # 2. Restaura o UUID no Xray (Caso estivesse bloqueado/removido)
+                                sync_xray_user add "$user" "$old_uuid"
+                                
+                                new_exp_br=$(date -d "$new_exp" +%d/%m/%Y)
+                                echo -e "${GREEN}✔ Validade estendida para: $new_exp_br${NC}"
+                                echo -e "${YELLOW}✔ Acesso Xray restaurado com sucesso!${NC}"
+                                sleep 2
                                 ;;
                             0) break ;;
                         esac
