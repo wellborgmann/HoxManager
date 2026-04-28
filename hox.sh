@@ -5,7 +5,7 @@
 if [ -f "VERSION" ]; then
     VERSION=$(cat VERSION | xargs)
 else
-    VERSION="2.0.7"
+    VERSION="2.0.8"
 fi
 
 
@@ -928,7 +928,15 @@ update_server() {
 
     echo -e "${YELLOW}Iniciando atualização...${NC}"
     
-    # 0. Cachebuster para evitar cache do GitHub
+    # 0. Cachebuster rigoroso para bypassar o cache do GitHub Raw
+    echo "  -> Sincronizando versão exata com GitHub..."
+    LATEST_HASH=$(curl -s "https://api.github.com/repos/wellborgmann/HoxManager/commits/main" | grep '"sha":' | head -1 | cut -d '"' -f 4)
+    
+    if [ -n "$LATEST_HASH" ]; then
+         FETCH_URL="https://raw.githubusercontent.com/wellborgmann/HoxManager/$LATEST_HASH"
+    else
+         FETCH_URL="$GITHUB_URL"
+    fi
     local TS=$(date +%s)
     
     # 1. Parar serviços
@@ -941,7 +949,7 @@ update_server() {
     # 2. Atualizar Binário
     echo "  -> Baixando novo binário..."
     mkdir -p /usr/local/hox
-    if curl -L "$GITHUB_URL/server?v=$TS" -o /usr/local/hox/server.tmp; then
+    if curl -L "$FETCH_URL/server?v=$TS" -o /usr/local/hox/server.tmp; then
         # Verifica o tamanho: se for menor que 100kb, provavelmente é um erro 404 do GitHub
         file_size=$(stat -c%s "/usr/local/hox/server.tmp")
         if [ "$file_size" -lt 102400 ]; then
@@ -959,7 +967,7 @@ update_server() {
     # 3. Atualizar Script Shell
     script_location=$(readlink -f "$0")
     echo "  -> Atualizando script de gestão: $script_location"
-    if curl -L "$GITHUB_URL/hox.sh?v=$TS" -o "${script_location}.tmp"; then
+    if curl -L "$FETCH_URL/hox.sh?v=$TS" -o "${script_location}.tmp"; then
         file_size=$(stat -c%s "${script_location}.tmp")
         if [ "$file_size" -lt 1024 ]; then
              echo -e "${RED}✘ Erro: O script baixado é inválido. Verifique o link no GitHub.${NC}"
