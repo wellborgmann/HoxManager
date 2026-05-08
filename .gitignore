@@ -1,0 +1,63 @@
+# Código Fonte (PROTEGIDO - NÃO ENVIAR)
+*.go
+go.mod
+go.sum
+
+# Binários de Distribuição (LIBERADOS)
+# server
+# installer
+
+# Scripts de Administração Local (PROTEGIDO)
+deploy.sh
+build_all.sh
+setup_firewall.sh
+
+# Outros binários não relacionados
+server_test
+server_relay
+server_relay_test
+*.exe
+*.test
+*.bin
+
+# Arquivos de backup e temporários
+*.bak
+*.tmp
+*.temp
+*~
+.nfs*
+
+# Logs
+*.log
+/var/log/
+
+# IDE e Sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Configurações sensíveis e Segurança
+.env
+config.json
+ssl/
+*.pem
+*.key
+*.crt
+*.jks
+*.p12
+
+# Backups e Dados
+backup/
+*.db
+*.sqlite
+*.sql
+
+# Outros binários e pacotes
+*.apk
+*.idsig
+node_modules/
+
+# Scripts de Administração Local (se não quiser compartilhar)
+setup_firewall.sh
