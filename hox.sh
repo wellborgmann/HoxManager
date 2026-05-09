@@ -888,7 +888,7 @@ apply_and_restart() {
         fi
         # Garante liberação no IPTABLES
         iptables -I INPUT -p $proto --dport "$port" -j ACCEPT 2>/dev/null
-    done
+    }
 
     # Processar portas TCP
     IFS=',' read -ra ADDR_TCP <<< "$tcp_ports"
