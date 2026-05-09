@@ -2,7 +2,7 @@
 
 # Hox Management - CLI
 # Versão Dinâmica (Injetada pelo build)
-VERSION="2.1.9"
+VERSION="2.2.0"
 
 # Sobrescrever se houver um arquivo local (opcional)
 if [ -f "/etc/hox/VERSION" ]; then
@@ -467,11 +467,25 @@ menu() {
     metrics_text=$(printf " RAM: %-25s │ CPU: %-15s " "$RAM" "$CPU")
     draw_boxed_line "$metrics_text"
     
-    # Exibir Portas Abertas
-    TCP_PORTS=$(jq -r '.tcp | join(", ")' "$PORT_DB" 2>/dev/null || echo "443")
-    UDP_PORTS=$(jq -r '.udp | join(", ")' "$PORT_DB" 2>/dev/null || echo "7300")
-    draw_boxed_line " PORTAS TCP: ${WHITE}${TCP_PORTS}${NC}"
-    draw_boxed_line " PORTAS UDP: ${WHITE}${UDP_PORTS}${NC}"
+    # Filtrar apenas portas que o core "server" está REALMENTE usando
+    get_active_hox_ports() {
+        local type=$1 # tcp ou udp
+        local ports_raw=$(jq -r ".$type | .[]" "$PORT_DB" 2>/dev/null)
+        local active=""
+        for p in $ports_raw; do
+            # Verifica se o processo 'server' está ouvindo nesta porta
+            if lsof -i :$p -sTCP:LISTEN -n -P 2>/dev/null | grep -q "server"; then
+                [ -z "$active" ] && active="$p" || active="$active, $p"
+            fi
+        done
+        [ -z "$active" ] && echo -e "${RED}Nenhuma${NC}" || echo -e "${GREEN}$active${NC}"
+    }
+
+    TCP_ACTIVE=$(get_active_hox_ports "tcp")
+    UDP_ACTIVE=$(get_active_hox_ports "udp")
+    
+    draw_boxed_line " PORTAS TCP ATIVAS: $TCP_ACTIVE"
+    draw_boxed_line " PORTAS UDP ATIVAS: $UDP_ACTIVE"
     
     echo -e "${CYAN}├────────────────────────────────────────────────────────┤${NC}"
     draw_boxed_line "  ${WHITE}1)${NC} Gerenciar Usuários"
