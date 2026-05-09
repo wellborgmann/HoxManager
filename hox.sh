@@ -2,7 +2,7 @@
 
 # Hox Management - CLI
 # Versão Dinâmica (Injetada pelo build)
-VERSION="2.1.5"
+VERSION="2.1.6"
 
 # Sobrescrever se houver um arquivo local (opcional)
 if [ -f "/etc/hox/VERSION" ]; then
@@ -856,50 +856,67 @@ apply_and_restart() {
     tcp_ports=$(jq -r '.tcp | join(",")' "$PORT_DB")
     udp_ports=$(jq -r '.udp | join(",")' "$PORT_DB")
     
-    # Liberar portas ocupadas
-    IFS=',' read -ra ADDR <<< "$tcp_ports"
-    for p in "${ADDR[@]}"; do
-        [[ -z "$p" ]] && continue
-        if lsof -i :$p >/dev/null 2>&1; then
-            pid=$(lsof -t -i :$p)
-            service_name=$(systemctl list-units --type=service --state=running | grep -oP '\S+\.service' | xargs -I {} sh -c 'systemctl show {} -p MainPID | grep -q "MainPID='$pid'" && echo {}' | head -1)
+    echo -e "${YELLOW}Liberando e validando portas...${NC}"
+
+    # Lista de serviços web comuns que podem conflitar
+    WEB_SERVICES=("nginx" "apache2" "httpd")
+
+    # Função interna para liberar porta
+    free_port() {
+        local port=$1
+        local proto=$2
+        if lsof -i :$port >/dev/null 2>&1; then
+            local pid=$(lsof -t -i :$port)
+            # Tenta descobrir o nome do serviço via systemctl
+            local service_name=$(systemctl list-units --type=service --state=running | grep -oP '\S+\.service' | xargs -I {} sh -c 'systemctl show {} -p MainPID | grep -q "MainPID='$pid'" && echo {}' | head -1)
+            
             if [ -n "$service_name" ]; then
-                systemctl stop "$service_name"
-                echo "Parando serviço $service_name na porta $p"
+                echo -e "  -> ${YELLOW}Detectado serviço ${WHITE}$service_name${YELLOW} na porta $port. Parando...${NC}"
+                systemctl stop "$service_name" 2>/dev/null
+                
+                # Se for um serviço web conhecido, desativamos o boot para não perder a porta no restart
+                for ws in "${WEB_SERVICES[@]}"; do
+                    if [[ "$service_name" == *"$ws"* ]]; then
+                        echo -e "  -> ${RED}Desativando auto-início de $service_name para proteger a porta...${NC}"
+                        systemctl disable "$service_name" 2>/dev/null
+                    fi
+                done
             else
-                kill -9 $pid
-                echo "Matando processo $pid na porta $p"
+                echo -e "  -> ${YELLOW}Matando processo avulso (PID: $pid) na porta $port...${NC}"
+                kill -9 $pid 2>/dev/null
             fi
         fi
-        iptables -I INPUT -p tcp --dport "$p" -j ACCEPT 2>/dev/null
-    done
-    IFS=',' read -ra ADDR <<< "$udp_ports"
-    for p in "${ADDR[@]}"; do
-        [[ -z "$p" ]] && continue
-        if lsof -i :$p >/dev/null 2>&1; then
-            pid=$(lsof -t -i :$p)
-            service_name=$(systemctl list-units --type=service --state=running | grep -oP '\S+\.service' | xargs -I {} sh -c 'systemctl show {} -p MainPID | grep -q "MainPID='$pid'" && echo {}' | head -1)
-            if [ -n "$service_name" ]; then
-                systemctl stop "$service_name"
-                echo "Parando serviço $service_name na porta $p"
-            else
-                kill -9 $pid
-                echo "Matando processo $pid na porta $p"
-            fi
-        fi
-        iptables -I INPUT -p udp --dport "$p" -j ACCEPT 2>/dev/null
+        # Garante liberação no IPTABLES
+        iptables -I INPUT -p $proto --dport "$port" -j ACCEPT 2>/dev/null
     done
 
-    # 🛠️ RECONSTRUÇÃO DINÂMICA DO SERVIÇO: Garante que o binário Go receba as portas do config.json
+    # Processar portas TCP
+    IFS=',' read -ra ADDR_TCP <<< "$tcp_ports"
+    for p in "${ADDR_TCP[@]}"; do
+        [[ -z "$p" ]] && continue
+        free_port "$p" "tcp"
+    done
+
+    # Processar portas UDP (UDPGW)
+    IFS=',' read -ra ADDR_UDP <<< "$udp_ports"
+    for p in "${ADDR_UDP[@]}"; do
+        [[ -z "$p" ]] && continue
+        free_port "$p" "udp"
+    done
+
+    # 🛠️ RECONSTRUÇÃO DO SERVIÇO: Adicionamos Conflicts para reforçar a segurança no boot
     cat <<EOF > /etc/systemd/system/hox.service
 [Unit]
 Description=HoxTunnel Service
 After=network.target xray.service
+Conflicts=nginx.service apache2.service httpd.service
 
 [Service]
 WorkingDirectory=/usr/local/hox
+ExecStartPre=/usr/bin/pkill -9 -f "/usr/local/hox/server"
 ExecStart=/usr/local/hox/server -ports $tcp_ports -udpgw $udp_ports
 Restart=always
+RestartSec=3
 
 [Install]
 WantedBy=multi-user.target
@@ -909,8 +926,9 @@ EOF
     systemctl restart xray.service 2>/dev/null
     systemctl restart hox.service
     systemctl enable xray.service hox.service >/dev/null 2>&1
-    echo -e "${GREEN}✔ Configurações aplicadas e portas liberadas!${NC}"
-    read -p "Enter..."
+    
+    echo -e "${GREEN}✔ Configurações aplicadas e portas blindadas!${NC}"
+    read -p "Pressione Enter para continuar..."
 }
 
 update_server() {
