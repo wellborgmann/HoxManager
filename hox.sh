@@ -2,7 +2,7 @@
 
 # Hox Management - CLI
 # Versão Dinâmica (Injetada pelo build)
-VERSION="2.1.8"
+VERSION="2.1.9"
 
 # Sobrescrever se houver um arquivo local (opcional)
 if [ -f "/etc/hox/VERSION" ]; then
@@ -909,7 +909,8 @@ Conflicts=nginx.service apache2.service httpd.service
 
 [Service]
 WorkingDirectory=/usr/local/hox
-ExecStartPre=/usr/bin/pkill -9 -f "/usr/local/hox/server"
+# 🛡️ Blindagem: Mata processos nas portas antes de subir
+ExecStartPre=/usr/bin/bash -c 'tcp_ports=$(jq -r ".tcp | join(\" \")" /etc/hox/ports.json); for p in \$tcp_ports; do fuser -k -n tcp \$p || true; done'
 ExecStart=/usr/local/hox/server -ports $tcp_ports -udpgw $udp_ports
 Restart=always
 RestartSec=3
@@ -996,10 +997,9 @@ update_server() {
         echo -e "${RED}✘ Erro ao baixar o script!${NC}"
     fi
 
-    echo "  -> Reiniciando serviços..."
+    echo "  -> Reiniciando serviços e limpando portas..."
     systemctl daemon-reload
-    sync_all_users_to_xray
-    systemctl start hox.service 2>/dev/null
+    apply_and_restart
     
     echo ""
     echo -e "${GREEN}✔ Sistema Hox atualizado com sucesso!${NC}"
