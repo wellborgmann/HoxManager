@@ -2,7 +2,7 @@
 
 # Hox Management - CLI
 # Versão Dinâmica (Injetada pelo build)
-VERSION="2.1.7"
+VERSION="2.1.8"
 
 # Sobrescrever se houver um arquivo local (opcional)
 if [ -f "/etc/hox/VERSION" ]; then
@@ -866,25 +866,21 @@ apply_and_restart() {
         local port=$1
         local proto=$2
         if lsof -i :$port >/dev/null 2>&1; then
-            local pid=$(lsof -t -i :$port)
-            # Tenta descobrir o nome do serviço via systemctl
-            local service_name=$(systemctl list-units --type=service --state=running | grep -oP '\S+\.service' | xargs -I {} sh -c 'systemctl show {} -p MainPID | grep -q "MainPID='$pid'" && echo {}' | head -1)
+            # Pega o nome do processo que está ouvindo na porta
+            local proc_name=$(lsof -i :$port -sTCP:LISTEN -t | xargs ps -o comm= -p | head -1 | tr -d ' ')
             
-            if [ -n "$service_name" ]; then
-                echo -e "  -> ${YELLOW}Detectado serviço ${WHITE}$service_name${YELLOW} na porta $port. Parando...${NC}"
-                systemctl stop "$service_name" 2>/dev/null
-                
-                # Se for um serviço web conhecido, desativamos o boot para não perder a porta no restart
-                for ws in "${WEB_SERVICES[@]}"; do
-                    if [[ "$service_name" == *"$ws"* ]]; then
-                        echo -e "  -> ${RED}Desativando auto-início de $service_name para proteger a porta...${NC}"
-                        systemctl disable "$service_name" 2>/dev/null
-                    fi
-                done
-            else
-                echo -e "  -> ${YELLOW}Matando processo avulso (PID: $pid) na porta $port...${NC}"
-                kill -9 $pid 2>/dev/null
+            echo -e "  -> ${YELLOW}Detectado processo ${WHITE}$proc_name${YELLOW} na porta $port. Limpando...${NC}"
+
+            # Se for um serviço web conhecido, paramos pelo systemctl
+            if [[ "$proc_name" == "apache2" || "$proc_name" == "httpd" || "$proc_name" == "nginx" ]]; then
+                systemctl stop "$proc_name" 2>/dev/null
+                systemctl disable "$proc_name" 2>/dev/null
+                echo -e "  -> ${RED}Serviço $proc_name parado e desativado do boot.${NC}"
             fi
+
+            # Força o fechamento de QUALQUER coisa que sobrou na porta
+            fuser -k -n $proto $port >/dev/null 2>&1
+            sleep 1
         fi
         # Garante liberação no IPTABLES
         iptables -I INPUT -p $proto --dport "$port" -j ACCEPT 2>/dev/null
