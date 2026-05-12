@@ -2,7 +2,7 @@
 
 # Hox Management - CLI
 # Versão Dinâmica (Injetada pelo build)
-VERSION="2.2.0"
+VERSION="2.2.1"
 
 # Sobrescrever se houver um arquivo local (opcional)
 if [ -f "/etc/hox/VERSION" ]; then
