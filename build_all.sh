@@ -13,7 +13,7 @@ echo "Limpando e ativando versão: $VER"
 
 # 2. Compilar o Servidor Principal (Protegido)
 echo "[1/2] Compilando Servidor Principal..."
-CGO_ENABLED=0 go build -ldflags="-s -w -X main.Version=$VER" -o server server.go
+CGO_ENABLED=0 go build -ldflags="-s -w -X main.Version=$VER" -trimpath -o server server.go
 if [ $? -eq 0 ]; then
     echo "  -> OK: arquivo 'server' gerado."
 else
@@ -27,7 +27,7 @@ sed -i "s/VERSION=\"[0-9.]*\"/VERSION=\"$VER\"/" hox.sh
 
 # 4. Compilar o Instalador (Protector)
 echo "[2/2] Compilando Instalador (Protector)..."
-CGO_ENABLED=0 go build -ldflags="-s -w -X main.VERSION=$VER" -o installer protector.go
+CGO_ENABLED=0 go build -ldflags="-s -w -X main.VERSION=$VER" -trimpath -o installer protector.go
 if [ $? -eq 0 ]; then
     echo "  -> OK: arquivo 'installer' gerado."
 else
